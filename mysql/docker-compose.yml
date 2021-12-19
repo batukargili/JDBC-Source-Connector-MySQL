@@ -1,0 +1,13 @@
+version: '3.1'
+services:
+  # *-----------------------------*
+  # To connect to the DB:
+  #   docker exec -it mysql bash
+  # *-----------------------------*
+  mysql:
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: test_db
+
