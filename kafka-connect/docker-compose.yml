@@ -1,0 +1,89 @@
+---
+version: "2"
+services:
+  kafka-connect:
+      image: confluentinc/cp-kafka-connect
+      container_name: kafka-mysql-jdbc-mysql
+      user: root
+      ports:
+        - 8083:8083
+      environment:
+        CONNECT_BOOTSTRAP_SERVERS: ${BOOTSTRAP_SERVERS}
+        CONNECT_REST_PORT: 8083
+        CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect-jdbc-mysql-0
+        CONNECT_GROUP_ID: kafka-connect-jdbc-mysql
+        CONNECT_CONFIG_STORAGE_TOPIC: _kafka-connect-jdbc-mysql-configs
+        CONNECT_OFFSET_STORAGE_TOPIC: _kafka-connect-jdbc-mysql-offsets
+        CONNECT_STATUS_STORAGE_TOPIC: _kafka-connect-jdbc-mysql-status
+
+        # Schema Registry
+        CONNECT_KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
+        CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: ${SCHEMA_REGISTRY_URL}
+        CONNECT_KEY_CONVERTER_BASIC_AUTH_CREDENTIALS_SOURCE: "USER_INFO"
+        CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_BASIC_AUTH_USER_INFO: ${SCHEMA_REGISTRY_BASIC_AUTH_USER_INFO}
+        CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+        CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: ${SCHEMA_REGISTRY_URL}
+        CONNECT_VALUE_CONVERTER_BASIC_AUTH_CREDENTIALS_SOURCE: "USER_INFO"
+        CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_BASIC_AUTH_USER_INFO: ${SCHEMA_REGISTRY_BASIC_AUTH_USER_INFO}
+        CONNECT_INTERNAL_KEY_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+        CONNECT_INTERNAL_VALUE_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+
+        CONNECT_LOG4J_ROOT_LOGLEVEL: 'INFO'
+        CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "3"
+        CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "3"
+        CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "3"
+        CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components,/data/connect-jars
+        #
+        CONNECT_REQUEST_TIMEOUT_MS: "20000"
+        CONNECT_SASL_MECHANISM: "PLAIN"
+        CONNECT_RETRY_BACKOFF_MS: "500"
+        CONNECT_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: "https"
+        CONNECT_SECURITY_PROTOCOL: "SASL_SSL"
+        CONNECT_SASL_JAAS_CONFIG: ${JAAS_CONFIG}
+        CONNECT_CONSUMER_SASL_JAAS_CONFIG: ${JAAS_CONFIG}
+        CONNECT_PRODUCER_SASL_JAAS_CONFIG: ${JAAS_CONFIG}
+        #
+        CONNECT_CONSUMER_SECURITY_PROTOCOL: "SASL_SSL"
+        CONNECT_CONSUMER_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: "https"
+        CONNECT_CONSUMER_SASL_MECHANISM: "PLAIN"
+        CONNECT_CONSUMER_REQUEST_TIMEOUT_MS: "20000"
+        CONNECT_CONSUMER_RETRY_BACKOFF_MS: "500"
+        #
+        CONNECT_PRODUCER_SECURITY_PROTOCOL: SASL_SSL
+        CONNECT_PRODUCER_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: "https"
+        CONNECT_PRODUCER_SASL_MECHANISM: "PLAIN"
+        CONNECT_PRODUCER_REQUEST_TIMEOUT_MS: "20000"
+        CONNECT_PRODUCER_RETRY_BACKOFF_MS: "500"
+        CONNECT_LOG4J_APPENDER_STDOUT_LAYOUT_CONVERSIONPATTERN: "[%d] %p %X{connector.context}%m (%c:%L)%n"
+        #
+        CONNECT_OFFSET_FLUSH_TIMEOUT_MS: "60000"
+        CONNECT_OFFSET_FLUSH_INTERVAL_MS: "10000"
+        KAFKA_PRODUCER_MAX_REQUEST_SIZE: "10485760"
+        CONNECT_PRODUCER_MAX_REQUEST_SIZE: "10485760"
+        KAFKA_HEAP_OPTS: "-Xmx10g"
+
+      command:
+        - bash
+        - -c
+        - |
+          echo "Installing Kafka Confluent Connector"
+          confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.0.0
+
+          echo "Installing MySQL JDBC Driver"
+          cd /usr/share/confluent-hub-components/confluentinc-kafka-connect-jdbc/lib
+          curl https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.25/mysql-connector-java-8.0.25.jar -o mysql-connector-java-8.0.25.jar
+
+          #
+          echo "Launching Kafka Connect worker"
+          /etc/confluent/docker/run &
+          #
+          echo "Waiting for Kafka Connect to start listening on 0.0.0.0:8083 ⏳"
+          while : ; do
+            curl_status=$$(curl -s -o /dev/null -w %{http_code} http://0.0.0.0:8083/connectors)
+            echo -e $$(date) " Kafka Connect listener HTTP state: " $$curl_status " (waiting for 200)"
+            if [ $$curl_status -eq 200 ] ; then
+            break
+            fi
+            sleep 5
+          done
+          sleep infinity
