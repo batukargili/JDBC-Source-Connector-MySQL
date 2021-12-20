@@ -1,0 +1,21 @@
+{
+  "name": "mysql-jdbc-product-view-00",
+  "config": {
+            "connector.class"                                                : "io.confluent.connect.jdbc.JdbcSourceConnector",
+            "connection.url"                                                 : "jdbc:mysql://192.168.1.1:3306/test_db",
+            "connection.user"                                                : "root",
+            "connection.password"                                            : "root",
+            "numeric.mapping"                                                : "best_fit",
+            "tasks.max"                                                      : "1",
+            "mode"                                                           : "incrementing",
+            "table.types"                                                    : "VIEW",
+            "incrementing.column.name"                                       : "Id",
+            "table.whitelist"                                                : "test_db.ProductsAboveAveragePrice",
+            "topic.prefix"                                                   : "JDBC.test_db.",
+            "db.timezone"                                                    : "UTC",
+            "validate.non.null"                                              : "false",
+            "poll.interval.ms"                                               : "1000",
+            "batch.max.rows"                                                 : "3000",
+            "table.poll.interval.ms"                                         : "6000"
+  }
+}

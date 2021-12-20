@@ -1,0 +1,17 @@
+docker exec -it mysql_mysql_1  bash
+
+mysql -uroot -p
+
+show databases;
+
+use test_db;
+
+create table product (
+	id INT PRIMARY KEY,
+	product_name VARCHAR(50),
+	product_price FLOAT,
+	Timest TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+show tables;
+
